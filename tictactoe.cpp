@@ -2,11 +2,16 @@
 #include "FL/Fl_Box.H"
 #include "FL/Fl_Button.H"
 #include "FL/Fl_Group.H"
-#include "FL/Fl_Output.H"
 #include "FL/Fl_Window.H"
 #include <cstring>
 
 enum BoxStates { Empty, Cross, Circle };
+const char *getLabel(BoxStates state) {
+  if (state == Empty) {
+    return "";
+  }
+  return state == Cross ? "X" : "O";
+}
 
 class GameButton : public Fl_Button {
   BoxStates currState = Empty;
@@ -16,15 +21,17 @@ public:
 };
 
 class GameBoard : public Fl_Group {
-  GameButton *gameButtons[10];
+  GameButton *gameButtons[8];
   BoxStates playerChoice = Empty;
   BoxStates currentPlayer = Cross;
-  friend GameButton;
+
   // We need a static callback, so we can get the context of the
   // current object (since it's getting called from the outside)
-  friend void chooserCallback(Fl_Widget *button, void *voidPtr);
+  // yes it's gross and hacky and it uses only void pointers
   static void staticGameCallback(Fl_Widget *widget, void *context);
   void gameCallback(Fl_Widget *widget);
+  friend GameButton;
+  friend void chooserCallback(Fl_Widget *button, void *voidPtr);
 
 public:
   GameBoard(int x, int y, int w, int h, const char *label = 0);
@@ -53,9 +60,7 @@ void GameBoard::staticGameCallback(Fl_Widget *widget, void *context) {
   ((GameBoard *)context)->gameCallback(widget);
 }
 void GameBoard::gameCallback(Fl_Widget *widget) {
-  // TODO: Check if the widget is the button
-  if (currentPlayer == playerChoice) {
-  }
+  widget->label(getLabel(this->playerChoice));
 }
 
 struct Screens {
@@ -71,12 +76,11 @@ void chooserCallback(Fl_Widget *button, void *voidPtr) {
       strcmp(button->label(), "X") ? Circle : Cross;
   screenPtr->currChooser->hide();
   screenPtr->currGame->show();
-  // TODO: Currently this does not show anything. Figure out why.
 }
 
 int main() {
   Fl_Window mainWindow(500, 500, "Tic Tac Toe");
-  GameBoard mainGame(500, 500, 500, 500);
+  GameBoard mainGame(0, 0, 500, 500);
   mainGame.hide();
   Fl_Group chooser(0, 0, 500, 500);
   Fl_Box dialogBox(50, 50, 400, 70, "Select an option\n to start the game:");
