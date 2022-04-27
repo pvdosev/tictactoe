@@ -2,6 +2,7 @@
 #include "FL/Fl_Box.H"
 #include "FL/Fl_Button.H"
 #include "FL/Fl_Group.H"
+#include "FL/Fl_Output.H"
 #include "FL/Fl_Window.H"
 #include <cstring>
 
@@ -15,22 +16,19 @@ public:
 };
 
 class GameBoard : public Fl_Group {
-  Fl_Button *gameButtons[8];
+  GameButton *gameButtons[10];
   BoxStates playerChoice = Empty;
   BoxStates currentPlayer = Cross;
   friend GameButton;
+  // We need a static callback, so we can get the context of the
+  // current object (since it's getting called from the outside)
   friend void chooserCallback(Fl_Widget *button, void *voidPtr);
   static void staticGameCallback(Fl_Widget *widget, void *context);
   void gameCallback(Fl_Widget *widget);
 
 public:
   GameBoard(int x, int y, int w, int h, const char *label = 0);
-  // We need a static callback, so we can get the context of the
-  // current object (since it's getting called from the outside)
 };
-
-GameButton::GameButton(int x, int y, int w, int h, const char *label)
-    : Fl_Button(x, y, w, h) {}
 
 GameBoard::GameBoard(int x, int y, int w, int h, const char *label)
     : Fl_Group(x, y, w, h) {
@@ -39,14 +37,17 @@ GameBoard::GameBoard(int x, int y, int w, int h, const char *label)
   int buttonX = 0;
   int buttonY = 0;
   for (int i = 0; i < 9; i++) {
-    int buttonX = (i / 3) * buttonWidth;
-    int buttonY = (i % 3) * buttonHeight;
+    int buttonX = (i % 3) * buttonWidth;
+    int buttonY = (i / 3) * buttonHeight;
     gameButtons[i] =
-        new GameButton(buttonX, buttonY, buttonWidth, buttonHeight, 0);
+        new GameButton(buttonX, buttonY, buttonWidth, buttonHeight);
     gameButtons[i]->callback(staticGameCallback, (void *)this);
   }
   end();
 }
+
+GameButton::GameButton(int x, int y, int w, int h, const char *label)
+    : Fl_Button(x, y, w, h, label) {}
 
 void GameBoard::staticGameCallback(Fl_Widget *widget, void *context) {
   ((GameBoard *)context)->gameCallback(widget);
@@ -67,15 +68,16 @@ void chooserCallback(Fl_Widget *button, void *voidPtr) {
   // to be passed in callback functions
   Screens *screenPtr = static_cast<Screens *>(voidPtr);
   screenPtr->currGame->playerChoice =
-      strcmp(button->label(), "X") ? Cross : Circle;
+      strcmp(button->label(), "X") ? Circle : Cross;
   screenPtr->currChooser->hide();
   screenPtr->currGame->show();
-  // TODO: Currently this does not show anything.Figure out why.
+  // TODO: Currently this does not show anything. Figure out why.
 }
 
 int main() {
-  GameBoard mainGame(0, 0, 500, 500);
   Fl_Window mainWindow(500, 500, "Tic Tac Toe");
+  GameBoard mainGame(500, 500, 500, 500);
+  mainGame.hide();
   Fl_Group chooser(0, 0, 500, 500);
   Fl_Box dialogBox(50, 50, 400, 70, "Select an option\n to start the game:");
   dialogBox.labelsize(25);
