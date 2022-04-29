@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
-#include <set>
+#include <iterator>
 #include <vector>
 
 enum BoxStates { Empty, Cross, Circle };
@@ -97,7 +97,27 @@ const bool isWinning(std::vector<int> moves) {
   return false;
 }
 
-int miniMax(std::vector<int> playerMoves, std::vector<int> cpuMoves) {}
+bool isOver(std::vector<int> playerMoves, std::vector<int> cpuMoves) {
+  return ((playerMoves.size() + cpuMoves.size()) > 8) ? true : false;
+}
+
+std::vector<int> getAvailMoves(std::vector<int> playerMoves,
+                               std::vector<int> cpuMoves) {
+  // add the player and cpu moves together, then get their difference
+  // from a completely filled board. The leftover is the available moves
+  std::vector<int> totalMoves = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  std::vector<int> remMoves;
+  std::move(cpuMoves.begin(), cpuMoves.end(), std::back_inserter(playerMoves));
+  std::sort(std::begin(playerMoves), std::end(playerMoves));
+  std::set_difference(totalMoves.begin(), totalMoves.end(), playerMoves.begin(),
+                      playerMoves.end(),
+                      std::inserter(remMoves, remMoves.begin()));
+  return remMoves;
+}
+
+int miniMax(std::vector<int> playerMoves, std::vector<int> cpuMoves) {
+  return 0;
+}
 
 void GameBoard::staticGameCallback(Fl_Widget *widget, void *context) {
   ((GameBoard *)context)->gameCallback(widget);
