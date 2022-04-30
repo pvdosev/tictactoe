@@ -40,6 +40,7 @@ class GameBoard : public Fl_Group {
   void gameCallback(Fl_Widget *widget);
   friend GameButton;
   friend void chooserCallback(Fl_Widget *button, void *voidPtr);
+  void disableButtons();
 
 public:
   GameBoard(int x, int y, int w, int h, const char *label = 0);
@@ -151,15 +152,25 @@ int miniMax(std::vector<int> playerMoves, std::vector<int> cpuMoves,
   }
 }
 
+void GameBoard::disableButtons() {
+  for (int i = 0; i < 9; ++i) {
+    this->gameButtons[i]->deactivate();
+  }
+  winDisplay.show();
+}
+
 void GameBoard::staticGameCallback(Fl_Widget *widget, void *context) {
   ((GameBoard *)context)->gameCallback(widget);
 }
 void GameBoard::gameCallback(Fl_Widget *widget) {
   widget->label(getLabel(this->playerSymbol));
+  widget->deactivate();
   this->playerMoves.push_back(((GameButton *)widget)->index + 1);
   if (isOver(this->playerMoves, this->cpuMoves)) {
+    this->disableButtons();
     winDisplay.show();
     winDisplay.label("It's a tie!");
+    return;
   }
 
   std::vector<int> moves = getAvailMoves(playerMoves, cpuMoves);
@@ -175,15 +186,22 @@ void GameBoard::gameCallback(Fl_Widget *widget) {
   }
   this->cpuMoves.push_back(bestMove);
   this->gameButtons[bestMove - 1]->label(getLabel(this->cpuSymbol));
+  this->gameButtons[bestMove - 1]->deactivate();
   if (isOver(this->playerMoves, this->cpuMoves)) {
     winDisplay.show();
     winDisplay.label("It's a tie!");
+    this->disableButtons();
+    return;
   } else if (isWinning(this->cpuMoves)) {
     winDisplay.show();
     winDisplay.label("You lose!");
+    this->disableButtons();
+    return;
   } else if (isWinning(this->playerMoves)) {
     winDisplay.show();
     winDisplay.label("You win!");
+    this->disableButtons();
+    return;
   }
 }
 
@@ -204,6 +222,7 @@ void chooserCallback(Fl_Widget *button, void *voidPtr) {
     screenPtr->currGame->cpuSymbol = Cross;
     // guaranteed to be the optimal move for X   :)
     screenPtr->currGame->gameButtons[0]->label("X");
+    screenPtr->currGame->gameButtons[0]->deactivate();
     screenPtr->currGame->cpuMoves.insert(screenPtr->currGame->cpuMoves.end(),
                                          1);
   }
