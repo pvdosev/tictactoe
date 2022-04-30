@@ -26,8 +26,10 @@ public:
 };
 
 class GameBoard : public Fl_Group {
-  GameButton *gameButtons[8];
-  BoxStates playerChoice = Empty;
+  GameButton *gameButtons[9];
+  BoxStates playerSymbol = Empty;
+  BoxStates cpuSymbol = Empty;
+  Fl_Box winDisplay;
   std::vector<int> playerMoves;
   std::vector<int> cpuMoves;
 
@@ -44,7 +46,7 @@ public:
 };
 
 GameBoard::GameBoard(int x, int y, int w, int h, const char *label)
-    : Fl_Group(x, y, w, h) {
+    : Fl_Group(x, y, w, h), winDisplay(FL_EMBOSSED_BOX, 50, 0, 400, 100, "") {
   int buttonWidth = w / 3;
   int buttonHeight = h / 3;
   int buttonX = 0;
@@ -58,6 +60,8 @@ GameBoard::GameBoard(int x, int y, int w, int h, const char *label)
     gameButtons[i]->labelsize(50);
     gameButtons[i]->index = i;
   }
+  winDisplay.labelsize(40);
+  winDisplay.hide();
   end();
 }
 
@@ -115,17 +119,72 @@ std::vector<int> getAvailMoves(std::vector<int> playerMoves,
   return remMoves;
 }
 
-int miniMax(std::vector<int> playerMoves, std::vector<int> cpuMoves) {
-  return 0;
+int miniMax(std::vector<int> playerMoves, std::vector<int> cpuMoves,
+            int newMove, bool isCpu, int depth) {
+  if (isCpu)
+    playerMoves.push_back(newMove);
+  else
+    cpuMoves.push_back(newMove);
+  if (isOver(playerMoves, cpuMoves))
+    return 0;
+  else if (isWinning(playerMoves))
+    return -1;
+  else if (isWinning(cpuMoves))
+    return 1;
+
+  int bestScore, currScore;
+  std::vector<int> availMoves = getAvailMoves(playerMoves, cpuMoves);
+  if (isCpu) {
+    bestScore = -1;
+    for (int i : availMoves) {
+      currScore = miniMax(playerMoves, cpuMoves, i, false, depth + 1);
+      bestScore = std::max(bestScore, currScore);
+    }
+    return bestScore;
+  } else {
+    bestScore = 1;
+    for (int i : availMoves) {
+      currScore = miniMax(playerMoves, cpuMoves, i, true, depth + 1);
+      bestScore = std::min(bestScore, currScore);
+    }
+    return bestScore;
+  }
 }
 
 void GameBoard::staticGameCallback(Fl_Widget *widget, void *context) {
   ((GameBoard *)context)->gameCallback(widget);
 }
 void GameBoard::gameCallback(Fl_Widget *widget) {
-  widget->label(getLabel(this->playerChoice));
-  this->playerMoves.insert(this->playerMoves.end(),
-                           ((GameButton *)widget)->index + 1);
+  widget->label(getLabel(this->playerSymbol));
+  this->playerMoves.push_back(((GameButton *)widget)->index + 1);
+  if (isOver(this->playerMoves, this->cpuMoves)) {
+    winDisplay.show();
+    winDisplay.label("It's a tie!");
+  }
+
+  std::vector<int> moves = getAvailMoves(playerMoves, cpuMoves);
+  int score;
+  int bestMove = 0;
+  int bestScore = -1;
+  for (int move : moves) {
+    score = miniMax(playerMoves, cpuMoves, move, false, 0);
+    if (score > bestScore) {
+      bestMove = move;
+      bestScore = score;
+    }
+  }
+  this->cpuMoves.push_back(bestMove);
+  this->gameButtons[bestMove - 1]->label(getLabel(this->cpuSymbol));
+  if (isOver(this->playerMoves, this->cpuMoves)) {
+    winDisplay.show();
+    winDisplay.label("It's a tie!");
+  } else if (isWinning(this->cpuMoves)) {
+    winDisplay.show();
+    winDisplay.label("You lose!");
+  } else if (isWinning(this->playerMoves)) {
+    winDisplay.show();
+    winDisplay.label("You win!");
+  }
 }
 
 struct Screens {
@@ -138,9 +197,11 @@ void chooserCallback(Fl_Widget *button, void *voidPtr) {
   // to be passed in callback functions
   Screens *screenPtr = static_cast<Screens *>(voidPtr);
   if (not strcmp(button->label(), "X")) {
-    screenPtr->currGame->playerChoice = Cross;
+    screenPtr->currGame->playerSymbol = Cross;
+    screenPtr->currGame->cpuSymbol = Circle;
   } else {
-    screenPtr->currGame->playerChoice = Circle;
+    screenPtr->currGame->playerSymbol = Circle;
+    screenPtr->currGame->cpuSymbol = Cross;
     // guaranteed to be the optimal move for X   :)
     screenPtr->currGame->gameButtons[0]->label("X");
     screenPtr->currGame->cpuMoves.insert(screenPtr->currGame->cpuMoves.end(),
